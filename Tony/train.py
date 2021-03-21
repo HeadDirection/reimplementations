@@ -9,16 +9,22 @@ import matplotlib.pyplot as plt
 NUM_ITERS = 50
 
 def main():
+    testAngs = np.load('angs_smooth.npy')
     model = ContinuousTimeRNN()
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-4, weight_decay=1e-5)
     criterion = nn.MSELoss()
 
+    chunksize = testAngs.shape[1] // NUM_ITERS
     datagen = AVDataGenerator(T=5000)
     losses = []
     for i in range(NUM_ITERS):
         print(f"Training iteration {i}")
+        rangeStart = i * chunksize
+        rangeEnd = rangeStart + chunksize - 1
+        angs = testAngs[:, rangeStart:rangeEnd]
+        print("angs: ", angs.shape)
 
-        angs = datagen.GenerateAngs()
+        # angs = datagen.GenerateAngs()
         av = datagen.AngsToAv(angs)
         initdir = datagen.AngsToInitDir(angs)
         expected = np.expand_dims(np.expand_dims(angs[1][:-1], 1), 1)
@@ -42,7 +48,6 @@ def main():
     plt.savefig('loss_ctrnn.png')
     plt.clf()
 
-    testAngs = np.load('angs_smooth.npy')
     testAv = datagen.AngsToAv(testAngs)
     testInitdir = datagen.AngsToInitDir(testAngs)
     testVelocities = np.expand_dims(np.expand_dims(testAv, 1), 1)
