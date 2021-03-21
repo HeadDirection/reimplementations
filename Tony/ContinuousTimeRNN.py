@@ -19,11 +19,27 @@ class ContinuousTimeRNN(nn.Module):
         self.fc = nn.Linear(init_dim, hidden_dim)
         nn.init.normal_(self.fc.weight, mean=0, std=(0.1/math.sqrt(self.fc.weight.size(0))))
 
+        W_in = torch.Tensor(input_dim, hidden_dim)
+        W_rec = torch.Tensor(hidden_dim, hidden_dim)
+        W_out = torch.Tensor(hidden_dim, output_dim)
+        bias = torch.Tensor(hidden_dim)
+
+        self.W_in = nn.Parameter(W_in)
+        self.W_rec = nn.Parameter(W_rec)
+        self.W_out = nn.Parameter(W_out)
+        self.bias = nn.Parameter(bias)
+
+        sig = (1.3/hidden_dim)**0.5
+        nn.init.constant_(self.W_in, 0)
+        nn.init.normal_(self.W_rec,0,sig)
+        nn.init.normal_(self.W_out,0,sig)
+        nn.init.normal_(self.bias,0,sig)
+
         # TODO: Are these weight init good?
-        self.W_in = nn.Parameter( nn.init.normal_(torch.randn((input_dim, hidden_dim)), mean=0, std=(0.1/math.sqrt(input_dim))) )
-        self.W_rec = nn.Parameter( nn.init.normal_(torch.randn((hidden_dim, hidden_dim)), mean=0, std=(0.1/math.sqrt(hidden_dim))) ) 
-        self.W_out = nn.Parameter( nn.init.normal_(torch.randn((hidden_dim, output_dim)), mean=0, std=(0.1/math.sqrt(hidden_dim))) )
-        self.bias = nn.Parameter( torch.zeros(hidden_dim) )
+        # self.W_in = nn.Parameter( nn.init.normal_(torch.randn((input_dim, hidden_dim)), mean=0, std=(0.1/math.sqrt(input_dim))) )
+        # self.W_rec = nn.Parameter( nn.init.normal_(torch.randn((hidden_dim, hidden_dim)), mean=0, std=(0.1/math.sqrt(hidden_dim))) ) 
+        # self.W_out = nn.Parameter( nn.init.normal_(torch.randn((hidden_dim, output_dim)), mean=0, std=(0.1/math.sqrt(hidden_dim))) )
+        # self.bias = nn.Parameter( torch.zeros(hidden_dim) )
 
     def step_forward(self, x, prevH):
         """
@@ -57,6 +73,7 @@ class ContinuousTimeRNN(nn.Module):
             else:
                 h[t, :, :] = self.step_forward(velocities[t, :, :], h[t-1])
 
+        h = torch.relu(torch.tanh(h))
         out = h @ self.W_out
         return out
 
