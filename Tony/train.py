@@ -11,7 +11,7 @@ NUM_ITERS = 50
 def main():
     testAngs = np.load('angs_smooth.npy')
     model = ContinuousTimeRNN()
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4, weight_decay=1e-5)
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-5)
     criterion = nn.MSELoss()
 
     chunksize = testAngs.shape[1] // NUM_ITERS
@@ -33,6 +33,7 @@ def main():
 
         output = model(torch.from_numpy(initdir).float(), torch.from_numpy(velocities).float())
         loss = criterion(output, torch.from_numpy(expected).float())
+        # import pdb; pdb.set_trace()
 
         print(f"\tLoss for iteration {i} is {loss.item()}")
         losses.append(loss.item())

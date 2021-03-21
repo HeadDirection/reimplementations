@@ -20,9 +20,9 @@ class ContinuousTimeRNN(nn.Module):
         nn.init.normal_(self.fc.weight, mean=0, std=(0.1/math.sqrt(self.fc.weight.size(0))))
 
         # TODO: Are these weight init good?
-        self.W_in = nn.Parameter( torch.zeros((input_dim, hidden_dim)) ) # TODO was randn
-        self.W_rec = nn.Parameter( torch.zeros((hidden_dim, hidden_dim)) ) # TODO was randn
-        self.W_out = nn.Parameter( torch.zeros((hidden_dim, output_dim)) ) # TODO was randn
+        self.W_in = nn.Parameter( nn.init.normal_(torch.randn((input_dim, hidden_dim)), mean=0, std=(0.1/math.sqrt(input_dim))) )
+        self.W_rec = nn.Parameter( nn.init.normal_(torch.randn((hidden_dim, hidden_dim)), mean=0, std=(0.1/math.sqrt(hidden_dim))) ) 
+        self.W_out = nn.Parameter( nn.init.normal_(torch.randn((hidden_dim, output_dim)), mean=0, std=(0.1/math.sqrt(hidden_dim))) )
         self.bias = nn.Parameter( torch.zeros(hidden_dim) )
 
     def step_forward(self, x, prevH):
