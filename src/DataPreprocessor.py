@@ -26,12 +26,27 @@ class DataPreprocessor():
         self.batches = np.transpose(self.batches, (2,1,0))
 
     def GetInitialInput(self):
+        """
+        Returns representation of initial input (e.g. sin and cos of initial angle)
+        Shape: (1, N, dim(initdir)), 
+            where dim(initdir)=2 if it's just sin and cos, and
+            where N is the number of samples
+        """
         return np.expand_dims(self.batches[1,:,2:], 0)
     
     def GetTrainingInputs(self):
+        """
+        Returns inputs (e.g. velocities)
+        Shape: (T, N, dim(input)), where dim(input)=1 if input is just velocity
+        """
         return np.expand_dims(self.batches[:,:,1], 2)
 
     def GetTrainingOutputs(self):
+        """
+        Returns expected outputs (e.g. sin and cos of the correct angles)
+        Shape: (T, N, dim(output)), 
+            where dim(output)=2 if output is sin and cos of correct angle
+        """
         return self.batches[:,:,2:]
 
     def AngsToAv(self, angs):
