@@ -1,5 +1,6 @@
 from AVDataGenerator import AVDataGenerator
 from ContinuousTimeRNN import ContinuousTimeRNN
+from SingleLayerCTRNN import SingleLayerCTRNN
 
 import numpy as np
 import torch
@@ -7,33 +8,49 @@ from torch import nn
 import matplotlib.pyplot as plt
 
 NUM_ITERS = 50
+NUM_EPOCHS = 50
+DIN = 1
+DOUT = 2
 
 def main():
     testAngs = np.load('angs_smooth.npy')
-    model = ContinuousTimeRNN()
+    # model = ContinuousTimeRNN()
+    model = SingleLayerCTRNN()
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-5)
     criterion = nn.MSELoss()
 
     chunksize = testAngs.shape[1] // NUM_ITERS
     datagen = AVDataGenerator(T=5000)
     losses = []
-    for i in range(NUM_ITERS):
-        print(f"Training iteration {i}")
-        rangeStart = i * chunksize
-        rangeEnd = rangeStart + chunksize - 1
-        angs = testAngs[:, rangeStart:rangeEnd]
-        print("angs: ", angs.shape)
 
-        # angs = datagen.GenerateAngs()
-        av = datagen.AngsToAv(angs)
-        initdir = datagen.AngsToInitDir(angs)
-        expected = np.expand_dims(np.expand_dims(angs[1][:-1], 1), 1)
-        velocities = np.expand_dims(np.expand_dims(av, 1), 1)
-        initdir = np.expand_dims(initdir, 0)
+    for epoch in range(NUM_EPOCHS):
+        print(f"Epoch {epoch}")
+        initdirs = np.zeros((1, NUM_ITERS, 2))
+        velocities = np.zeros((chunksize-1, NUM_ITERS, DIN))
+        expected = np.zeros((chunksize-1, NUM_ITERS, DOUT))
 
-        output = model(torch.from_numpy(initdir).float(), torch.from_numpy(velocities).float())
+        for i in range(NUM_ITERS):
+            rangeStart = i * chunksize
+            rangeEnd = rangeStart + chunksize
+            angs = testAngs[:, rangeStart:rangeEnd]
+
+            # import pdb; pdb.set_trace()
+            # angs = datagen.GenerateAngs()
+            initdir = datagen.AngsToInitDir(angs)
+            initdirs[:, i] = initdir
+
+            av = datagen.AngsToAv(angs)
+            velocities[:, i, 0] = av
+
+            sines = np.sin(angs[1][:-1])
+            cosines = np.cos(angs[1][:-1])
+            expected[:, i, 0] = sines
+            expected[:, i, 1] = cosines
+
+        optimizer.zero_grad()
+
+        output = model(torch.from_numpy(initdirs).float(), torch.from_numpy(velocities).float())
         loss = criterion(output, torch.from_numpy(expected).float())
-        # import pdb; pdb.set_trace()
 
         print(f"\tLoss for iteration {i} is {loss.item()}")
         losses.append(loss.item())
@@ -49,13 +66,16 @@ def main():
     plt.savefig('loss_ctrnn.png')
     plt.clf()
 
+    # TODO change
     testAv = datagen.AngsToAv(testAngs)
     testInitdir = datagen.AngsToInitDir(testAngs)
     testVelocities = np.expand_dims(np.expand_dims(testAv, 1), 1)
     output = model(torch.from_numpy(testInitdir).float(), torch.from_numpy(testVelocities).float())
+    output = np.squeeze(np.transpose(output.detach().numpy(), (2, 0, 1)))
+    radsOut = np.arctan2(output[0], output[1])
 
     plt.plot(testAngs[1], label='ground truth')
-    plt.plot(np.squeeze(output.detach().numpy()), label='predicted')
+    plt.plot(radsOut, label='predicted')
     plt.legend()
     plt.savefig('performance.png')
 

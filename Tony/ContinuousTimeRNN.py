@@ -5,7 +5,7 @@ import torch.nn.functional as F
 import math
 
 class ContinuousTimeRNN(nn.Module):
-    def __init__(self, init_dim=2, input_dim=1, hidden_dim=100, output_dim=1, alpha=0.1):
+    def __init__(self, init_dim=2, input_dim=1, hidden_dim=100, output_dim=2, alpha=0.1):
         """
         output_dim=1 instead of 2 because predicting raw radians instead of sin() and cos()
         """
@@ -57,7 +57,7 @@ class ContinuousTimeRNN(nn.Module):
 
     def forward(self, initdir, velocities):
         """
-        initdir - (N, initdim) initial direction (for us it's [sin(theta0), cos(theta0)])
+        initdir - (N, initdim) initial direction (for us it's [sin(theta0), cos(theta0)]) # TODO
         velocities (T, N, D) - input vector for each example at every timestep 
 
         returns (T, N, Dout) - predictions for each example at each timesteps
