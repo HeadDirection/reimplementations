@@ -67,7 +67,7 @@ class ContinuousTimeRNN(nn.Module):
         T, N, D = velocities.shape
 
         h = torch.zeros((T, N, self.H)).to(device)
-        h0 = self.fc(initdir.squeeze()).to(device)
+        h0 = self.fc(initdir.squeeze(dim=0)).to(device)
 
         for t in range(T):
             if t == 0:

@@ -16,7 +16,7 @@ def main():
     # Get the data and preprocess it
     angs = np.load('angs_smooth.npy')
     dataProcessor = DataPreprocessor(angs, sample_length=700, normalize=True)
-    h0 = torch.from_numpy(dataProcessor.GetInitialInput()).float().to(device)
+    initdir = torch.from_numpy(dataProcessor.GetInitialInput()).float().to(device)
     input = torch.from_numpy(dataProcessor.GetTrainingInputs()).float().to(device)
     output = torch.from_numpy(dataProcessor.GetTrainingOutputs()).float().to(device)
 
@@ -33,7 +33,7 @@ def main():
     for epoch in range(NUM_EPOCHS):
         optimizer.zero_grad()
 
-        pred = model(h0, input)
+        pred = model(initdir, input)
         loss = criterion(pred, output)
 
         print (f'Epoch [{epoch+1}/{NUM_EPOCHS}], Loss: {loss.item():.4f}' )
@@ -57,11 +57,11 @@ def main():
 
 def TestCTRNN(angs, model, device):
     dataProcessor = DataPreprocessor(angs, sample_length=700, normalize=True)
-    h0 = torch.from_numpy(dataProcessor.GetInitialInput()).float().to(device)
+    initdir = torch.from_numpy(dataProcessor.GetInitialInput()).float().to(device)
     input = torch.from_numpy(dataProcessor.GetTrainingInputs()).float().to(device)
     # output = torch.from_numpy(dataProcessor.GetTrainingOutputs()).float().to(device)
     
-    pred = model(h0, input)
+    pred = model(initdir, input)
     pred = np.transpose(pred.detach().cpu().numpy(), (2, 1, 0))
     pred = np.reshape(pred, (pred.shape[0], -1))
     radsOut = np.unwrap(np.arctan2(pred[0], pred[1]))
