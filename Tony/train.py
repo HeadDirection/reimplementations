@@ -1,63 +1,48 @@
-from AVDataGenerator import AVDataGenerator
-from ContinuousTimeRNN import ContinuousTimeRNN
-from SingleLayerCTRNN import SingleLayerCTRNN
-
 import numpy as np
 import torch
 from torch import nn
 import matplotlib.pyplot as plt
 
-NUM_ITERS = 50
-NUM_EPOCHS = 50
-DIN = 1
-DOUT = 2
+from AVDataGenerator import AVDataGenerator
+from DataPreprocessor import DataPreprocessor
+from ContinuousTimeRNN import ContinuousTimeRNN
+from SingleLayerCTRNN import SingleLayerCTRNN
+
+NUM_EPOCHS = 1000
 
 def main():
-    testAngs = np.load('angs_smooth.npy')
-    # model = ContinuousTimeRNN()
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+    # Get the data and preprocess it
+    angs = np.load('angs_smooth.npy')
+    dataProcessor = DataPreprocessor(angs, sample_length=700)
+    h0 = torch.from_numpy(dataProcessor.GetInitialInput()).float().to(device)
+    input = torch.from_numpy(dataProcessor.GetTrainingInputs()).float().to(device)
+    output = torch.from_numpy(dataProcessor.GetTrainingOutputs()).float().to(device)
+
+    # Define the model and optimizer
     model = SingleLayerCTRNN()
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-5)
+    optimizer = torch.optim.Adam(model.parameters(), lr=.005, weight_decay=1e-6)
     criterion = nn.MSELoss()
+    if torch.cuda.is_available():
+        model = model.cuda()
+        criterion = criterion.cuda()
 
-    chunksize = testAngs.shape[1] // NUM_ITERS
-    datagen = AVDataGenerator(T=5000)
+    # Train
     losses = []
-
     for epoch in range(NUM_EPOCHS):
-        print(f"Epoch {epoch}")
-        initdirs = np.zeros((1, NUM_ITERS, 2))
-        velocities = np.zeros((chunksize-1, NUM_ITERS, DIN))
-        expected = np.zeros((chunksize-1, NUM_ITERS, DOUT))
-
-        for i in range(NUM_ITERS):
-            rangeStart = i * chunksize
-            rangeEnd = rangeStart + chunksize
-            angs = testAngs[:, rangeStart:rangeEnd]
-
-            # import pdb; pdb.set_trace()
-            # angs = datagen.GenerateAngs()
-            initdir = datagen.AngsToInitDir(angs)
-            initdirs[:, i] = initdir
-
-            av = datagen.AngsToAv(angs)
-            velocities[:, i, 0] = av
-
-            sines = np.sin(angs[1][:-1])
-            cosines = np.cos(angs[1][:-1])
-            expected[:, i, 0] = sines
-            expected[:, i, 1] = cosines
-
         optimizer.zero_grad()
 
-        output = model(torch.from_numpy(initdirs).float(), torch.from_numpy(velocities).float())
-        loss = criterion(output, torch.from_numpy(expected).float())
+        pred = model(h0, input)
+        loss = criterion(pred, output)
 
-        print(f"\tLoss for iteration {i} is {loss.item()}")
+        print (f'Epoch [{epoch+1}/{NUM_EPOCHS}], Loss: {loss.item():.4f}' )
         losses.append(loss.item())
 
         loss.backward()
         optimizer.step()
     
+    # Graph the losses
     print(f"Losses: {losses}")
     plt.plot(losses)
     plt.xlabel('Iteration')
@@ -66,15 +51,21 @@ def main():
     plt.savefig('loss_ctrnn.png')
     plt.clf()
 
-    # TODO change
-    testAv = datagen.AngsToAv(testAngs)
-    testInitdir = datagen.AngsToInitDir(testAngs)
-    testVelocities = np.expand_dims(np.expand_dims(testAv, 1), 1)
-    output = model(torch.from_numpy(testInitdir).float(), torch.from_numpy(testVelocities).float())
-    output = np.squeeze(np.transpose(output.detach().numpy(), (2, 0, 1)))
-    radsOut = np.arctan2(output[0], output[1])
+    # Test
+    testAngs = np.load('angs_smooth.npy')
+    TestCTRNN(testAngs, model, device)
 
-    plt.plot(testAngs[1], label='ground truth')
+def TestCTRNN(angs, model, device):
+    dataProcessor = DataPreprocessor(angs, sample_length=angs.shape[1])
+    h0 = torch.from_numpy(dataProcessor.GetInitialInput()).float().to(device)
+    input = torch.from_numpy(dataProcessor.GetTrainingInputs()).float().to(device)
+    # output = torch.from_numpy(dataProcessor.GetTrainingOutputs()).float().to(device)
+
+    pred = model(h0, input)
+    pred = np.squeeze(np.transpose(pred.detach().numpy(), (2, 0, 1)))
+    radsOut = np.arctan2(pred[0], pred[1])
+
+    plt.plot(angs[1], label='ground truth')
     plt.plot(radsOut, label='predicted')
     plt.legend()
     plt.savefig('performance.png')
