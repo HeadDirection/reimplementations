@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 class SingleLayerCTRNN(nn.Module):
-    def __init__(self, input_dim, h0_data_dim, hidden_dim, output_dim,nonlin,g_init=1.3,store_h=False):
+    def __init__(self, input_dim=1, h0_data_dim=2, hidden_dim=100, output_dim=2,nonlin=lambda x: torch.relu(torch.tanh(x)),g_init=1.3,store_h=False):
         super().__init__()
 
         self.nonlin = nonlin
@@ -34,6 +34,7 @@ class SingleLayerCTRNN(nn.Module):
         # Flag all parameters as trainable
         self.W_h0 = nn.Parameter(W_h0)
         self.b_h0 = nn.Parameter(b_h0)
+        self.fc = nn.Linear(h0_data_dim, hidden_dim)
 
         self.W_in = nn.Parameter(W_in)
 
@@ -71,6 +72,7 @@ class SingleLayerCTRNN(nn.Module):
 
         nn.init.normal_(self.W_h0,0,sig)
         nn.init.normal_(self.b_h0,0,sig)
+        nn.init.normal_(self.fc.weight, mean=0, std=sig)
 
         return None
 
@@ -82,14 +84,15 @@ class SingleLayerCTRNN(nn.Module):
         - T is number of timesteps (with spacing dt between timesteps)
         - N is number of samples
         - Dim(Input) is self.input_dim
-
         Timestep 0 is used exclusively to produce the initial hidden state
         """
         
         T, N = input_ts.size(0), input_ts.size(1)
 
         # Calculate initial hidden state
-        h = h0_data@self.W_h0 + self.b_h0
+        # import pdb; pdb.set_trace()
+        # h = h0_data@self.W_h0 + self.b_h0
+        h = torch.unsqueeze(self.fc(h0_data.squeeze(dim=0)), dim=0)
 
         # Produce full hidden state time series
         for t in range(1,T):

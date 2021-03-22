@@ -8,14 +8,14 @@ from DataPreprocessor import DataPreprocessor
 from ContinuousTimeRNN import ContinuousTimeRNN
 from SingleLayerCTRNN import SingleLayerCTRNN
 
-NUM_EPOCHS = 1000
+NUM_EPOCHS = 100
 
 def main():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     # Get the data and preprocess it
     angs = np.load('angs_smooth.npy')
-    dataProcessor = DataPreprocessor(angs, sample_length=700)
+    dataProcessor = DataPreprocessor(angs, sample_length=700, normalize=True)
     h0 = torch.from_numpy(dataProcessor.GetInitialInput()).float().to(device)
     input = torch.from_numpy(dataProcessor.GetTrainingInputs()).float().to(device)
     output = torch.from_numpy(dataProcessor.GetTrainingOutputs()).float().to(device)
@@ -56,14 +56,15 @@ def main():
     TestCTRNN(testAngs, model, device)
 
 def TestCTRNN(angs, model, device):
-    dataProcessor = DataPreprocessor(angs, sample_length=angs.shape[1])
+    dataProcessor = DataPreprocessor(angs, sample_length=700, normalize=True)
     h0 = torch.from_numpy(dataProcessor.GetInitialInput()).float().to(device)
     input = torch.from_numpy(dataProcessor.GetTrainingInputs()).float().to(device)
     # output = torch.from_numpy(dataProcessor.GetTrainingOutputs()).float().to(device)
-
+    
     pred = model(h0, input)
-    pred = np.squeeze(np.transpose(pred.detach().numpy(), (2, 0, 1)))
-    radsOut = np.arctan2(pred[0], pred[1])
+    pred = np.transpose(pred.detach().cpu().numpy(), (2, 1, 0))
+    pred = np.reshape(pred, (pred.shape[0], -1))
+    radsOut = np.unwrap(np.arctan2(pred[0], pred[1]))
 
     plt.plot(angs[1], label='ground truth')
     plt.plot(radsOut, label='predicted')

@@ -29,7 +29,7 @@ class DataPreprocessor():
         return np.expand_dims(self.batches[1,:,2:], 0)
     
     def GetTrainingInputs(self):
-        return self.batches[:,:,1]
+        return np.expand_dims(self.batches[:,:,1], 2)
 
     def GetTrainingOutputs(self):
         return self.batches[:,:,2:]
