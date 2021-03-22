@@ -76,6 +76,9 @@ def TestCTRNN(angs, model, device):
 
     plt.plot(angs[1], label='ground truth')
     plt.plot(radsOut, label='predicted')
+    plt.xlabel('Timestep (ms)')
+    plt.ylabel('Angle (rad)')
+    plt.title('Prediction Visualization')
     plt.legend()
     plt.savefig('performance.png')
 
