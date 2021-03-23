@@ -8,26 +8,30 @@ from DataPreprocessor import DataPreprocessor
 from ContinuousTimeRNN import ContinuousTimeRNN
 from SingleLayerCTRNN import SingleLayerCTRNN
 
-NUM_EPOCHS = 1
-TRAINING_BATCHES = 2
+NUM_EPOCHS = 100
+TRAINING_BATCHES = 10
 
 def main():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     print("Processing training data...")
-    angs = np.load('angs_smooth.npy')
-    datagen = AVDataGenerator(T=angs.shape[1])
+    realAngs = np.load('angs_smooth.npy')
+    diffs = realAngs[1][1:] - realAngs[1][:-1]
+    datagen = AVDataGenerator(T=realAngs.shape[1], dt=25, mean=np.mean(diffs)/100, sigma=np.std(diffs)/10, momentum=0)
     
     initdirs = []
     inputs = []
     outputs = []
     
     for i in range(TRAINING_BATCHES):
-        dataProcessor = DataPreprocessor(datagen.GenerateAngs(), sample_length=700, normalize=False)
+        # if i == 0:
+        #     dataProcessor = DataPreprocessor(realAngs, sample_length=700, normalize=True)
+        # else:
+        dataProcessor = DataPreprocessor(datagen.GenerateAngs(), sample_length=700, normalize=True)
         initdirs.append(torch.from_numpy(dataProcessor.GetInitialInput()).float())
         inputs.append(torch.from_numpy(dataProcessor.GetTrainingInputs()).float())
         outputs.append(torch.from_numpy(dataProcessor.GetTrainingOutputs()).float())
-        print("Outputs: ", outputs[i][0][0])
+        print(f"Sample initdirs for fake batch {i}: ", initdirs[i][0][0])
 
     initdirs = torch.stack(initdirs).to(device)
     inputs = torch.stack(inputs).to(device)
@@ -81,12 +85,12 @@ def TestCTRNN(angs, model, device, training_outputs):
     radsOut = np.unwrap(np.arctan2(pred[0], pred[1]))
 
     print("Graphing test performance to performance.png...")
-    plt.plot(angs[1], label='ground truth', color='blue')
-    plt.plot(radsOut, label='predicted', color='orange')
     for i, output in enumerate(training_outputs):
         out = np.transpose(output.detach().cpu().numpy(), (2, 1, 0))
-        out = np.reshape(pred, (pred.shape[0], -1))
-        plt.plot(np.unwrap(np.arctan2(out[0], out[1])) + (i+2), label=f'training data {i}')
+        out = np.reshape(out, (out.shape[0], -1))
+        plt.plot(np.unwrap(np.arctan2(out[0], out[1])), label=f'fake batch {i}')
+    plt.plot(angs[1], label='ground truth', color='blue')
+    plt.plot(radsOut, label='predicted', color='orange')
     plt.xlabel('Timestep (ms)')
     plt.ylabel('Angle (rad)')
     plt.title('Prediction Visualization')

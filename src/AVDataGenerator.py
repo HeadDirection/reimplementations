@@ -2,6 +2,8 @@ import numpy as np
 import time
 import matplotlib.pyplot as plt
 
+from DataPreprocessor import DataPreprocessor
+
 class AVDataGenerator():
     def __init__(self, T=10000, dt=25, mean=0, sigma=0.03, momentum=0.8):
         """
@@ -38,7 +40,7 @@ class AVDataGenerator():
         for t in range(self.T - 1):
             times = np.append(times, times[t] + self.dt)
             if (rads[t] > 20 and vels[t] > 0) or (rads[t] < -20 and vels[t] < 0):
-                vels[t] = -vels[t]
+                vels[t] = -2 * vels[t]
             rads = np.append(rads, rads[t] + (self.dt * vels[t]))
             vels = np.append(vels, (np.random.normal(self.mean, self.sigma)) + self.momentum * vels[t])
 
@@ -55,7 +57,16 @@ def main():
 
     datagen = AVDataGenerator(T=realAngs.shape[1], dt=25, mean=np.mean(diffs)/100, sigma=np.std(diffs)/10, momentum=0)
     fakeAngs = datagen.GenerateAngs()
-    plt.plot(fakeAngs[1], label='fake angs')
+
+    dataProcessor = DataPreprocessor(fakeAngs, sample_length=700, normalize=False)
+    fakeOutputs = dataProcessor.GetTrainingOutputs()
+    fakeOutputs = np.transpose(fakeOutputs, (2, 1, 0))
+    fakeOutputs = np.reshape(fakeOutputs, (fakeOutputs.shape[0], -1))
+    fakeOutputs = np.unwrap(np.arctan2(fakeOutputs[0], fakeOutputs[1]))
+    plt.plot(fakeOutputs, label='fake angs')
+    
+    # fakeAngs = datagen.GenerateAngs()
+    # plt.plot(fakeAngs[1], label='fake angs 2')
 
     plt.xlabel('Timestep (ms)')
     plt.ylabel('Angle (rad)')
