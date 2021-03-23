@@ -15,7 +15,7 @@ def main():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     print("Processing training data...")
-    realAngs = np.load('angs_smooth.npy')
+    realAngs = np.load('angs_smooth.npy') - 2 * np.pi
     diffs = realAngs[1][1:] - realAngs[1][:-1]
     datagen = AVDataGenerator(T=realAngs.shape[1], dt=25, mean=np.mean(diffs)/100, sigma=np.std(diffs)/10, momentum=0)
     
@@ -70,7 +70,7 @@ def main():
     plt.clf()
 
     print("Testing the model...")
-    testAngs = np.load('angs_smooth.npy')
+    testAngs = np.load('angs_smooth.npy') - 2 * np.pi
     TestCTRNN(testAngs, model, criterion, device, outputs)
 
 def TestCTRNN(angs, model, criterion, device, training_outputs):

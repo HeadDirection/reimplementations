@@ -14,7 +14,7 @@ def main():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     # Get the data 
-    angs = np.load('angs_smooth.npy')
+    angs = np.load('angs_smooth.npy') - 2 * np.pi
 
     # Preprocess the data
     dataProcessor = DataPreprocessor(angs, sample_length=700, normalize=True)
@@ -54,7 +54,7 @@ def main():
     plt.clf()
 
     # Test
-    testAngs = np.load('angs_smooth.npy')
+    testAngs = np.load('angs_smooth.npy') - 2 * np.pi
     TestCTRNN(testAngs, model, device)
 
 def TestCTRNN(angs, model, device):

@@ -48,7 +48,7 @@ class AVDataGenerator():
         return angs
 
 def main():
-    realAngs = np.load('angs_smooth.npy')
+    realAngs = np.load('angs_smooth.npy') - 2 * np.pi
     plt.plot(np.unwrap(realAngs[1]), label='real angs')
     diffs = realAngs[1][1:] - realAngs[1][:-1]
     print("realAngs avg diff: ", np.mean(diffs))
@@ -57,6 +57,9 @@ def main():
 
     for i in range(10):
         datagen = AVDataGenerator(T=realAngs.shape[1], dt=25, mean=np.mean(diffs)/100, sigma=np.std(diffs)/10, momentum=0)
+        # if i == 0:
+        #     fakeAngs = realAngs
+        # else:
         fakeAngs = datagen.GenerateAngs()
         dataProcessor = DataPreprocessor(fakeAngs, sample_length=700, normalize=False)
         fakeOutputs = dataProcessor.GetTrainingOutputs()
