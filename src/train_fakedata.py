@@ -24,10 +24,10 @@ def main():
     outputs = []
     
     for i in range(TRAINING_BATCHES):
-        # if i == 0:
-        #     dataProcessor = DataPreprocessor(realAngs, sample_length=700, normalize=True)
-        # else:
-        dataProcessor = DataPreprocessor(datagen.GenerateAngs(), sample_length=700, normalize=True)
+        if i == 0:
+            dataProcessor = DataPreprocessor(realAngs, sample_length=700, normalize=True)
+        else:
+            dataProcessor = DataPreprocessor(datagen.GenerateAngs(), sample_length=700, normalize=True)
         initdirs.append(torch.from_numpy(dataProcessor.GetInitialInput()).float())
         inputs.append(torch.from_numpy(dataProcessor.GetTrainingInputs()).float())
         outputs.append(torch.from_numpy(dataProcessor.GetTrainingOutputs()).float())
