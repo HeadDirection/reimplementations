@@ -8,8 +8,8 @@ from DataPreprocessor import DataPreprocessor
 from ContinuousTimeRNN import ContinuousTimeRNN
 from SingleLayerCTRNN import SingleLayerCTRNN
 
-NUM_EPOCHS = 30
-TRAINING_BATCHES = 10
+NUM_EPOCHS = 250
+TRAINING_BATCHES = 1
 
 def main():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -24,10 +24,10 @@ def main():
     outputs = []
     
     for i in range(TRAINING_BATCHES):
-        if i == 0:
-            dataProcessor = DataPreprocessor(realAngs, sample_length=700, normalize=True)
-        else:
-            dataProcessor = DataPreprocessor(datagen.GenerateAngs(), sample_length=700, normalize=True)
+        # if i == 0:
+        #     dataProcessor = DataPreprocessor(realAngs, sample_length=700, normalize=True)
+        # else:
+        dataProcessor = DataPreprocessor(datagen.GenerateAngs(), sample_length=700, normalize=True)
         initdirs.append(torch.from_numpy(dataProcessor.GetInitialInput()).float())
         inputs.append(torch.from_numpy(dataProcessor.GetTrainingInputs()).float())
         outputs.append(torch.from_numpy(dataProcessor.GetTrainingOutputs()).float())
@@ -70,7 +70,8 @@ def main():
     plt.clf()
 
     print("Testing the model...")
-    testAngs = np.load('angs_smooth.npy') - 2 * np.pi
+    # testAngs = np.load('angs_smooth.npy') - 2 * np.pi
+    testAngs = datagen.GenerateAngs()
     TestCTRNN(testAngs, model, criterion, device, outputs)
 
 def TestCTRNN(angs, model, criterion, device, training_outputs):
