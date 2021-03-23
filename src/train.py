@@ -9,20 +9,15 @@ from ContinuousTimeRNN import ContinuousTimeRNN
 from SingleLayerCTRNN import SingleLayerCTRNN
 
 NUM_EPOCHS = 100
-USE_FAKE_DATA = False
 
 def main():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     # Get the data 
-    if USE_FAKE_DATA:
-        datagen = AVDataGenerator(T=40000)
-        angs = datagen.GenerateAngs()
-    else:
-        angs = np.load('angs_smooth.npy')
+    angs = np.load('angs_smooth.npy')
 
     # Preprocess the data
-    dataProcessor = DataPreprocessor(angs, sample_length=700, normalize=not USE_FAKE_DATA)
+    dataProcessor = DataPreprocessor(angs, sample_length=700, normalize=True)
     initdir = torch.from_numpy(dataProcessor.GetInitialInput()).float().to(device)
     input = torch.from_numpy(dataProcessor.GetTrainingInputs()).float().to(device)
     output = torch.from_numpy(dataProcessor.GetTrainingOutputs()).float().to(device)
@@ -63,8 +58,7 @@ def main():
     TestCTRNN(testAngs, model, device)
 
 def TestCTRNN(angs, model, device):
-    # TODO: Should this always be normalized=True? Or keep consistent with whether training was normalized?
-    dataProcessor = DataPreprocessor(angs, sample_length=700, normalize=not USE_FAKE_DATA) 
+    dataProcessor = DataPreprocessor(angs, sample_length=700, normalize=True) 
     initdir = torch.from_numpy(dataProcessor.GetInitialInput()).float().to(device)
     input = torch.from_numpy(dataProcessor.GetTrainingInputs()).float().to(device)
     # output = torch.from_numpy(dataProcessor.GetTrainingOutputs()).float().to(device)

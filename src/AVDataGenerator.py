@@ -1,4 +1,5 @@
 import numpy as np
+import time
 
 class AVDataGenerator():
     def __init__(self, T=10000, dt=25, sigma=0.03, momentum=0.8):
@@ -21,6 +22,9 @@ class AVDataGenerator():
         First row is time in milliseconds
         Second row is head direction in radians
         """
+        seed = int(time.time_ns()) % (2**32)
+        np.random.seed(seed)
+
         initTime = 0
         initRad = np.random.uniform(-3, 3)
         initVel = np.random.uniform(-0.5, 0.5)
