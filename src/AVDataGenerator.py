@@ -30,7 +30,7 @@ class AVDataGenerator():
         np.random.seed(seed)
 
         initTime = 0
-        initRad = np.random.uniform(-3, 3)
+        initRad = np.random.uniform(-np.pi, np.pi)
         initVel = np.random.uniform(-0.5, 0.5)
 
         times = np.array([initTime])
