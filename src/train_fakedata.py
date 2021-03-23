@@ -8,7 +8,7 @@ from DataPreprocessor import DataPreprocessor
 from ContinuousTimeRNN import ContinuousTimeRNN
 from SingleLayerCTRNN import SingleLayerCTRNN
 
-NUM_EPOCHS = 100
+NUM_EPOCHS = 30
 TRAINING_BATCHES = 10
 
 def main():
@@ -71,15 +71,17 @@ def main():
 
     print("Testing the model...")
     testAngs = np.load('angs_smooth.npy')
-    TestCTRNN(testAngs, model, device, outputs)
+    TestCTRNN(testAngs, model, criterion, device, outputs)
 
-def TestCTRNN(angs, model, device, training_outputs):
+def TestCTRNN(angs, model, criterion, device, training_outputs):
     dataProcessor = DataPreprocessor(angs, sample_length=700, normalize=True) 
     initdir = torch.from_numpy(dataProcessor.GetInitialInput()).float().to(device)
     input = torch.from_numpy(dataProcessor.GetTrainingInputs()).float().to(device)
-    # output = torch.from_numpy(dataProcessor.GetTrainingOutputs()).float().to(device)
+    output = torch.from_numpy(dataProcessor.GetTrainingOutputs()).float().to(device)
     
     pred = model(initdir, input)
+    loss = criterion(pred, output)
+    print(f"Loss on real data: {loss.item():.4f}")
     pred = np.transpose(pred.detach().cpu().numpy(), (2, 1, 0))
     pred = np.reshape(pred, (pred.shape[0], -1))
     radsOut = np.unwrap(np.arctan2(pred[0], pred[1]))
@@ -94,7 +96,7 @@ def TestCTRNN(angs, model, device, training_outputs):
     plt.xlabel('Timestep (ms)')
     plt.ylabel('Angle (rad)')
     plt.title('Prediction Visualization')
-    plt.legend()
+    plt.legend(prop={'size': 6})
     plt.savefig('performance.png')
 
 if __name__ == '__main__':

@@ -55,15 +55,15 @@ def main():
     print("realAngs stddev: ", np.std(diffs))
     print("realAngs range: ", np.min(realAngs[1]), np.max(realAngs[1]))
 
-    datagen = AVDataGenerator(T=realAngs.shape[1], dt=25, mean=np.mean(diffs)/100, sigma=np.std(diffs)/10, momentum=0)
-    fakeAngs = datagen.GenerateAngs()
-
-    dataProcessor = DataPreprocessor(fakeAngs, sample_length=700, normalize=False)
-    fakeOutputs = dataProcessor.GetTrainingOutputs()
-    fakeOutputs = np.transpose(fakeOutputs, (2, 1, 0))
-    fakeOutputs = np.reshape(fakeOutputs, (fakeOutputs.shape[0], -1))
-    fakeOutputs = np.unwrap(np.arctan2(fakeOutputs[0], fakeOutputs[1]))
-    plt.plot(fakeOutputs, label='fake angs')
+    for i in range(10):
+        datagen = AVDataGenerator(T=realAngs.shape[1], dt=25, mean=np.mean(diffs)/100, sigma=np.std(diffs)/10, momentum=0)
+        fakeAngs = datagen.GenerateAngs()
+        dataProcessor = DataPreprocessor(fakeAngs, sample_length=700, normalize=False)
+        fakeOutputs = dataProcessor.GetTrainingOutputs()
+        fakeOutputs = np.transpose(fakeOutputs, (2, 1, 0))
+        fakeOutputs = np.reshape(fakeOutputs, (fakeOutputs.shape[0], -1))
+        fakeOutputs = np.unwrap(np.arctan2(fakeOutputs[0], fakeOutputs[1]))
+        plt.plot(fakeOutputs, label='fake angs')
     
     # fakeAngs = datagen.GenerateAngs()
     # plt.plot(fakeAngs[1], label='fake angs 2')
@@ -71,7 +71,7 @@ def main():
     plt.xlabel('Timestep (ms)')
     plt.ylabel('Angle (rad)')
     plt.title('AVDataGenerator Visualization')
-    plt.legend()
+    plt.legend(prop={'size': 6})
     plt.savefig('datagen.png')
 
 if __name__ == '__main__':
