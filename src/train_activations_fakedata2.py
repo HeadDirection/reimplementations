@@ -7,21 +7,18 @@ from AVDataGenerator import AVDataGenerator
 from DataPreprocessor import DataPreprocessor
 from ContinuousTimeRNN import ContinuousTimeRNN
 from SingleLayerCTRNN import SingleLayerCTRNN
+from simple_data_gen import *
 
-NUM_EPOCHS = 200
+NUM_EPOCHS = 5
 
 def main():
+    print("fakeAngs2 v5")
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     # Get the data 
-    angs = np.load('angs_smooth.npy') 
-    angs[1] -= 2 * np.pi
-
-    # Preprocess the data
-    dataProcessor = DataPreprocessor(angs, sample_length=700, normalize=True)
-    initdir = torch.from_numpy(dataProcessor.GetInitialInput()).float().to(device)
-    input = torch.from_numpy(dataProcessor.GetTrainingInputs()).float().to(device)
-    output = torch.from_numpy(dataProcessor.GetTrainingOutputs()).float().to(device)
+    train_data_size = 66
+    train_data_len = 700
+    initdir, input, output = gen_batch(train_data_size,train_data_len,.025,25,[],7, [0.0])
 
     # Define the model and optimizer
     model = SingleLayerCTRNN(store_h=True)
@@ -33,13 +30,11 @@ def main():
 
     # Train
     losses = []
-    hidden_states = None
     for epoch in range(NUM_EPOCHS):
         optimizer.zero_grad()
 
         pred, h = model(initdir, input)
         loss = criterion(pred, output)
-        hidden_states = np.array(h.cpu().detach().numpy())
 
         print (f'Epoch [{epoch+1}/{NUM_EPOCHS}], Loss: {loss.item():.4f}' )
         losses.append(loss.item())
@@ -56,14 +51,50 @@ def main():
     plt.savefig('loss_ctrnn.png')
     plt.clf()
 
-    # Test
-    testAngs = np.load('angs_smooth.npy') - 2 * np.pi
-    TestCTRNN(testAngs, model, criterion, device)
+    TestCTRNN(model, criterion)
+    
+    del initdir
+    del input
+    del output
 
+def TestCTRNN(model, criterion):
+    train_data_size = 66
+    train_data_len = 700
+    initdir, input, output = gen_batch(train_data_size,train_data_len,.025,25,[],7, [0.0])
+
+    pred, h = model(initdir, input)
+    loss = criterion(pred, output)
+    print(f"Loss on test data: {loss.item():.4f}")
+    hidden_states = np.array(h.cpu().detach().numpy())
+
+    pred = np.transpose(pred.detach().cpu().numpy(), (2, 1, 0))
+    pred = np.reshape(pred, (pred.shape[0], -1))
+    radsOut = np.unwrap(np.arctan2(pred[0], pred[1]))
+
+    np_output = output.detach().cpu().numpy()
+    radsActual = np.unwrap(np.arctan2(np_output[:,:,0].flatten(), np_output[:,:,1].flatten()))
+
+    plt.plot(radsActual, label='ground truth')
+    plt.plot(radsOut, label='predicted')
+    plt.xlabel('Timestep (ms)')
+    plt.ylabel('Angle (rad)')
+    plt.title('Prediction Visualization')
+    plt.legend()
+    plt.savefig('performance_fakeAngs2.png')
+
+    plotActivations(hidden_states, input, output)
+
+    del initdir 
+    del input 
+    del output 
+
+def plotActivations(hidden_states, input, output):
     from scipy.stats import binned_statistic, binned_statistic_2d
     seqlen = hidden_states.shape[0] * hidden_states.shape[1]
     velocities = input.cpu().detach().numpy().reshape(seqlen, -1)[:, 0]
-    headdirs = testAngs[1][:seqlen] % (2 * np.pi)
+    reshaped_output = output.cpu().detach().numpy().reshape(seqlen, -1)
+    headdirs = np.unwrap(np.arctan2(reshaped_output[:,0], reshaped_output[:,1])) % (2 * np.pi)
+
     print("Hidden states shape: ", hidden_states.shape)
     print("Inputs[i].shape: ", velocities.shape)
     print("Angs[i].shape: ", headdirs.shape)
@@ -74,16 +105,14 @@ def main():
         curr_ax = ax[x, y]
 
         activations = torch.relu( torch.tanh( torch.from_numpy( hidden_states.reshape(seqlen, -1)[:, cell] ) ) )
-        # activations = hidden_states.reshape(seqlen, -1)[:, cell]
-        # print("No nonlin")
         
         print(f"Doing it for cell={cell}")
-        bs = binned_statistic_2d(headdirs, velocities, activations, bins=[30, 30])
+        bs = binned_statistic_2d(velocities, headdirs, activations, bins=[30, 30])
         curr_ax.pcolormesh(bs[1], bs[2], bs[0])
         curr_ax.set_yticks([])
         curr_ax.set_xticks([])
     
-    plt.savefig(f"activations_realAngs.png")
+    plt.savefig(f"activations_fakeAngs2.png")
     plt.clf()
 
     _, ax = plt.subplots(10, 10, figsize=(20,15))
@@ -92,16 +121,14 @@ def main():
         curr_ax = ax[x, y]
 
         activations = torch.relu( torch.tanh( torch.from_numpy( hidden_states.reshape(seqlen, -1)[:, cell] ) ) )
-        # activations = hidden_states.reshape(seqlen, -1)[:, cell]
-        
-        # import pdb; pdb.set_trace()
+
         print(f"Doing it for cell={cell}, no bins")
         bs = binned_statistic(headdirs, activations)
         curr_ax.plot( (bs[1][1:] + bs[1][:-1]) / 2, bs[0])
         curr_ax.set_yticks([])
         curr_ax.set_xticks([])
     
-    plt.savefig(f"activations_realAngs_headdirs.png")
+    plt.savefig(f"activations_fakeAngs_headdirs2.png")
     plt.clf()
 
     _, ax = plt.subplots(10, 10, figsize=(20,15))
@@ -110,47 +137,15 @@ def main():
         curr_ax = ax[x, y]
 
         activations = torch.relu( torch.tanh( torch.from_numpy( hidden_states.reshape(seqlen, -1)[:, cell] ) ) )
-        # activations = hidden_states.reshape(seqlen, -1)[:, cell]
-        # print("No nonlin")
-        
-        # import pdb; pdb.set_trace()
+
         print(f"Doing it for cell={cell}")
         bs = binned_statistic(velocities, activations)
         curr_ax.plot( (bs[1][1:] + bs[1][:-1]) / 2, bs[0])
         curr_ax.set_yticks([])
         curr_ax.set_xticks([])
     
-    plt.savefig(f"activations_realAngs_vels.png")
+    plt.savefig(f"activations_fakeAngs_vels2.png")
     plt.clf()
-    
-    del initdir
-    del input
-    del output
-
-def TestCTRNN(angs, model, criterion, device):
-    dataProcessor = DataPreprocessor(angs, sample_length=700, normalize=True) 
-    initdir = torch.from_numpy(dataProcessor.GetInitialInput()).float().to(device)
-    input = torch.from_numpy(dataProcessor.GetTrainingInputs()).float().to(device)
-    output = torch.from_numpy(dataProcessor.GetTrainingOutputs()).float().to(device)
-    
-    pred, h = model(initdir, input)
-    loss = criterion(pred, output)
-    print(f"Loss on real data: {loss.item():.4f}")
-    pred = np.transpose(pred.detach().cpu().numpy(), (2, 1, 0))
-    pred = np.reshape(pred, (pred.shape[0], -1))
-    radsOut = np.unwrap(np.arctan2(pred[0], pred[1]))
-
-    plt.plot(angs[1], label='ground truth')
-    plt.plot(radsOut, label='predicted')
-    plt.xlabel('Timestep (ms)')
-    plt.ylabel('Angle (rad)')
-    plt.title('Prediction Visualization')
-    plt.legend()
-    plt.savefig('performance_realAngs.png')
-
-    del initdir 
-    del input 
-    del output 
 
 if __name__ == '__main__':
     main()

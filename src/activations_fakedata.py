@@ -8,20 +8,34 @@ from DataPreprocessor import DataPreprocessor
 from ContinuousTimeRNN import ContinuousTimeRNN
 from SingleLayerCTRNN import SingleLayerCTRNN
 
-NUM_EPOCHS = 200
+NUM_EPOCHS = 3
+TRAINING_BATCHES = 1
 
 def main():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     # Get the data 
-    angs = np.load('angs_smooth.npy') 
-    angs[1] -= 2 * np.pi
+    print("Processing training data...")
+    realAngs = np.load('angs_smooth.npy') - 2 * np.pi
+    diffs = realAngs[1][1:] - realAngs[1][:-1]
+    datameanmean = np.mean(diffs)/100
+    datameansigma = np.std(diffs)/10
+    datagen = AVDataGenerator(T=realAngs.shape[1], dt=25, mean=datameanmean, sigma=datameansigma, momentum=0)
+    
+    initdirs = []
+    inputs = []
+    outputs = []
+    
+    for i in range(TRAINING_BATCHES):
+        dataProcessor = DataPreprocessor(datagen.GenerateAngs(), sample_length=700, normalize=True)
+        initdirs.append(torch.from_numpy(dataProcessor.GetInitialInput()).float())
+        inputs.append(torch.from_numpy(dataProcessor.GetTrainingInputs()).float())
+        outputs.append(torch.from_numpy(dataProcessor.GetTrainingOutputs()).float())
+        print(f"Sample initdirs for fake batch {i}: ", initdirs[i][0][0])
 
-    # Preprocess the data
-    dataProcessor = DataPreprocessor(angs, sample_length=700, normalize=True)
-    initdir = torch.from_numpy(dataProcessor.GetInitialInput()).float().to(device)
-    input = torch.from_numpy(dataProcessor.GetTrainingInputs()).float().to(device)
-    output = torch.from_numpy(dataProcessor.GetTrainingOutputs()).float().to(device)
+    initdirs = torch.stack(initdirs).to(device)
+    inputs = torch.stack(inputs).to(device)
+    outputs = torch.stack(outputs).to(device)
 
     # Define the model and optimizer
     model = SingleLayerCTRNN(store_h=True)
@@ -32,38 +46,39 @@ def main():
         criterion = criterion.cuda()
 
     # Train
+    print("Training...")
     losses = []
     hidden_states = None
     for epoch in range(NUM_EPOCHS):
-        optimizer.zero_grad()
+        for batch in range(TRAINING_BATCHES):
+            optimizer.zero_grad()
 
-        pred, h = model(initdir, input)
-        loss = criterion(pred, output)
-        hidden_states = np.array(h.cpu().detach().numpy())
+            pred, h = model(initdirs[batch], inputs[batch])
+            loss = criterion(pred, outputs[batch])
+            hidden_states = np.array(h.cpu().detach().numpy())
 
-        print (f'Epoch [{epoch+1}/{NUM_EPOCHS}], Loss: {loss.item():.4f}' )
-        losses.append(loss.item())
+            print (f'Epoch [{epoch+1}/{NUM_EPOCHS}] Batch [{batch+1}/{TRAINING_BATCHES}] Loss: {loss.item():.4f}' )
+            losses.append(loss.item())
 
-        loss.backward()
-        optimizer.step()
+            loss.backward()
+            optimizer.step()
     
-    # Graph the losses
     print(f"Losses: {losses}")
-    plt.plot(losses)
-    plt.xlabel('Iteration')
-    plt.ylabel('Loss')
-    plt.title('Training loss history')
-    plt.savefig('loss_ctrnn.png')
-    plt.clf()
 
     # Test
     testAngs = np.load('angs_smooth.npy') - 2 * np.pi
+    datagen = AVDataGenerator(T=realAngs.shape[1], dt=25, mean=datameanmean, \
+            sigma=datameansigma, momentum=0)
+    testAngs = datagen.GenerateAngs()
+
     TestCTRNN(testAngs, model, criterion, device)
 
     from scipy.stats import binned_statistic, binned_statistic_2d
     seqlen = hidden_states.shape[0] * hidden_states.shape[1]
-    velocities = input.cpu().detach().numpy().reshape(seqlen, -1)[:, 0]
-    headdirs = testAngs[1][:seqlen] % (2 * np.pi)
+    velocities = inputs[0].cpu().detach().numpy().reshape(seqlen, -1)[:, 0]
+
+    import pdb; pdb.set_trace()
+    headdirs = np.unwrap(np.arctan2(outputs[0][0], outputs[0][1]))[:seqlen] % (2 * np.pi)
     print("Hidden states shape: ", hidden_states.shape)
     print("Inputs[i].shape: ", velocities.shape)
     print("Angs[i].shape: ", headdirs.shape)
@@ -83,7 +98,7 @@ def main():
         curr_ax.set_yticks([])
         curr_ax.set_xticks([])
     
-    plt.savefig(f"activations_realAngs.png")
+    plt.savefig(f"activations_fakeAngs.png")
     plt.clf()
 
     _, ax = plt.subplots(10, 10, figsize=(20,15))
@@ -101,7 +116,7 @@ def main():
         curr_ax.set_yticks([])
         curr_ax.set_xticks([])
     
-    plt.savefig(f"activations_realAngs_headdirs.png")
+    plt.savefig(f"activations_fakeAngs_headdirs.png")
     plt.clf()
 
     _, ax = plt.subplots(10, 10, figsize=(20,15))
@@ -120,12 +135,12 @@ def main():
         curr_ax.set_yticks([])
         curr_ax.set_xticks([])
     
-    plt.savefig(f"activations_realAngs_vels.png")
+    plt.savefig(f"activations_fakeAngs_vels.png")
     plt.clf()
     
-    del initdir
-    del input
-    del output
+    del initdirs
+    del inputs
+    del outputs
 
 def TestCTRNN(angs, model, criterion, device):
     dataProcessor = DataPreprocessor(angs, sample_length=700, normalize=True) 
@@ -146,7 +161,7 @@ def TestCTRNN(angs, model, criterion, device):
     plt.ylabel('Angle (rad)')
     plt.title('Prediction Visualization')
     plt.legend()
-    plt.savefig('performance_realAngs.png')
+    plt.savefig('performance_fakeAngs.png')
 
     del initdir 
     del input 

@@ -39,6 +39,12 @@ class DataPreprocessor():
         Returns inputs (e.g. velocities)
         Shape: (T, N, dim(input)), where dim(input)=1 if input is just velocity
         """
+        # vels = np.expand_dims(self.batches[:,:,1], 2)
+        # angsraw = self.angs[1][:self.T-1]
+        # angsraw = np.insert(angsraw, 0, angsraw[0])
+        # angsraw = angsraw.reshape(self.sample_length, -1)
+        # angs = np.expand_dims(((-angsraw) % (2 * np.pi)) - np.pi, 2)
+        # return np.concatenate((vels, angs), axis=2)
         return np.expand_dims(self.batches[:,:,1], 2)
 
     def GetTrainingOutputs(self):

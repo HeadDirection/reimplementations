@@ -8,8 +8,8 @@ from DataPreprocessor import DataPreprocessor
 from ContinuousTimeRNN import ContinuousTimeRNN
 from SingleLayerCTRNN import SingleLayerCTRNN
 
-NUM_EPOCHS = 250
-TRAINING_BATCHES = 1
+NUM_EPOCHS = 30
+TRAINING_BATCHES = 10
 
 def main():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -17,16 +17,20 @@ def main():
     print("Processing training data...")
     realAngs = np.load('angs_smooth.npy') - 2 * np.pi
     diffs = realAngs[1][1:] - realAngs[1][:-1]
-    datagen = AVDataGenerator(T=realAngs.shape[1], dt=25, mean=np.mean(diffs)/100, sigma=np.std(diffs)/10, momentum=0)
     
     initdirs = []
     inputs = []
     outputs = []
+
+    datameanmean = np.mean(diffs)/100
+    datameansigma = np.std(diffs)/10
     
     for i in range(TRAINING_BATCHES):
         # if i == 0:
         #     dataProcessor = DataPreprocessor(realAngs, sample_length=700, normalize=True)
         # else:
+        datagen = AVDataGenerator(T=realAngs.shape[1], dt=25, mean=np.random.uniform(datameanmean/2, datameanmean*1.5), \
+            sigma=np.random.uniform(datameansigma/2, datameansigma*1.5), momentum=0)
         dataProcessor = DataPreprocessor(datagen.GenerateAngs(), sample_length=700, normalize=True)
         initdirs.append(torch.from_numpy(dataProcessor.GetInitialInput()).float())
         inputs.append(torch.from_numpy(dataProcessor.GetTrainingInputs()).float())
@@ -38,7 +42,7 @@ def main():
     outputs = torch.stack(outputs).to(device)
 
     print("Defining the model...")
-    model = SingleLayerCTRNN()
+    model = SingleLayerCTRNN(input_dim=2)
     optimizer = torch.optim.Adam(model.parameters(), lr=.005, weight_decay=1e-6)
     criterion = nn.MSELoss()
     if torch.cuda.is_available():
@@ -70,8 +74,10 @@ def main():
     plt.clf()
 
     print("Testing the model...")
-    # testAngs = np.load('angs_smooth.npy') - 2 * np.pi
-    testAngs = datagen.GenerateAngs()
+    testAngs = np.load('angs_smooth.npy') - 2 * np.pi
+    # datagen = AVDataGenerator(T=realAngs.shape[1], dt=25, mean=datameanmean, \
+    #         sigma=datameansigma, momentum=0)
+    # testAngs = datagen.GenerateAngs()
     TestCTRNN(testAngs, model, criterion, device, outputs)
 
 def TestCTRNN(angs, model, criterion, device, training_outputs):

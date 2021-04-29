@@ -8,17 +8,25 @@ from DataPreprocessor import DataPreprocessor
 from ContinuousTimeRNN import ContinuousTimeRNN
 from SingleLayerCTRNN import SingleLayerCTRNN
 
-NUM_EPOCHS = 200
+NUM_EPOCHS = 300
 
 def main():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     # Get the data 
-    angs = np.load('angs_smooth.npy') 
-    angs[1] -= 2 * np.pi
+    realAngs = np.load('angs_smooth.npy')
+    realAngs[1] -= 2 * np.pi
+    diffs = realAngs[1][1:] - realAngs[1][:-1]
+    datameanmean = np.mean(diffs)/100
+    datameansigma = np.std(diffs)/10
+    datagen = AVDataGenerator(T=realAngs.shape[1], dt=25, mean=datameanmean, sigma=datameansigma, momentum=0)
 
     # Preprocess the data
-    dataProcessor = DataPreprocessor(angs, sample_length=700, normalize=True)
+    fakeAngs = datagen.GenerateAngs()
+    plt.plot(fakeAngs[1])
+    plt.savefig("fakeAngs.png")
+    plt.clf()
+    dataProcessor = DataPreprocessor(fakeAngs, sample_length=700, normalize=True)
     initdir = torch.from_numpy(dataProcessor.GetInitialInput()).float().to(device)
     input = torch.from_numpy(dataProcessor.GetTrainingInputs()).float().to(device)
     output = torch.from_numpy(dataProcessor.GetTrainingOutputs()).float().to(device)
@@ -57,7 +65,7 @@ def main():
     plt.clf()
 
     # Test
-    testAngs = np.load('angs_smooth.npy') - 2 * np.pi
+    testAngs = datagen.GenerateAngs()
     TestCTRNN(testAngs, model, criterion, device)
 
     from scipy.stats import binned_statistic, binned_statistic_2d
@@ -78,12 +86,12 @@ def main():
         # print("No nonlin")
         
         print(f"Doing it for cell={cell}")
-        bs = binned_statistic_2d(headdirs, velocities, activations, bins=[30, 30])
+        bs = binned_statistic_2d(headdirs, velocities, activations)
         curr_ax.pcolormesh(bs[1], bs[2], bs[0])
         curr_ax.set_yticks([])
         curr_ax.set_xticks([])
     
-    plt.savefig(f"activations_realAngs.png")
+    plt.savefig(f"activations_fakeAngs.png")
     plt.clf()
 
     _, ax = plt.subplots(10, 10, figsize=(20,15))
@@ -96,12 +104,12 @@ def main():
         
         # import pdb; pdb.set_trace()
         print(f"Doing it for cell={cell}, no bins")
-        bs = binned_statistic(headdirs, activations)
+        bs = binned_statistic(headdirs, activations, bins=[30, 30])
         curr_ax.plot( (bs[1][1:] + bs[1][:-1]) / 2, bs[0])
         curr_ax.set_yticks([])
         curr_ax.set_xticks([])
     
-    plt.savefig(f"activations_realAngs_headdirs.png")
+    plt.savefig(f"activations_fakeAngs_headdirs.png")
     plt.clf()
 
     _, ax = plt.subplots(10, 10, figsize=(20,15))
@@ -120,7 +128,7 @@ def main():
         curr_ax.set_yticks([])
         curr_ax.set_xticks([])
     
-    plt.savefig(f"activations_realAngs_vels.png")
+    plt.savefig(f"activations_fakeAngs_vels.png")
     plt.clf()
     
     del initdir
@@ -146,7 +154,7 @@ def TestCTRNN(angs, model, criterion, device):
     plt.ylabel('Angle (rad)')
     plt.title('Prediction Visualization')
     plt.legend()
-    plt.savefig('performance_realAngs.png')
+    plt.savefig('performance_fakeAngs.png')
 
     del initdir 
     del input 
