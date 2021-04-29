@@ -20,11 +20,18 @@ def main():
         criterion = criterion.cuda()
     model.load_state_dict(torch.load('activations_fakedata.pt', map_location=torch.device(device)))
 
-    inputs = None 
-    outputs = None
-    hidden_states = None
-    for i in range(10):
-        train_data_size = 100
+    plot_caption = 'fakeAngs2'
+    try:
+        inputs = np.load("inputs.npy")
+        outputs = np.load("outputs.npy")
+        hidden_states = np.load("hidden_states.npy")
+    except:
+        inputs = None 
+        outputs = None
+        hidden_states = None
+
+    for i in range(3):
+        train_data_size = 70
         train_data_len = 700
         dt = .025
         initdir, input, output = gen_batch(train_data_size,train_data_len,dt,25,[],7, [0.0])
@@ -43,6 +50,10 @@ def main():
             inputs = np.concatenate((inputs, np_input), axis=1)
             outputs = np.concatenate((outputs, np_output), axis=1)
             hidden_states = np.concatenate((hidden_states, np_h), axis=1)
+        
+        del initdir 
+        del input 
+        del output 
 
     train_data_size = 100
     train_data_len = 700
@@ -53,8 +64,7 @@ def main():
     pred, h = model(initdir, input)
     loss = criterion(pred, output)
     print(f"Loss on test data: {loss.item():.4f}")
-    hidden_states = np.array(h.cpu().detach().numpy())
-    import pdb; pdb.set_trace()
+    np_h = np.array(h.cpu().detach().numpy())
 
     pred = np.transpose(pred.detach().cpu().numpy(), (2, 1, 0))
     pred = np.reshape(pred, (pred.shape[0], -1))
@@ -70,19 +80,23 @@ def main():
     plt.ylabel('Angle (rad)')
     plt.title('Prediction Visualization')
     plt.legend()
-    plt.savefig('performance_fakeAngs2.png')
+    plt.savefig(f'performance_{plot_caption}.png')
 
-    plotActivations(hidden_states, input, output)
+    print("Saving hidden_states, inputs, outputs to disk")
+    np.save("hidden_states.npy", hidden_states)
+    np.save("inputs.npy", inputs)
+    np.save("outputs.npy", outputs)
+    plotActivations(hidden_states, inputs, outputs, plot_caption)
 
     del initdir 
     del input 
     del output 
 
-def plotActivations(hidden_states, input, output):
+def plotActivations(hidden_states, inputs, outputs, plot_caption):
     from scipy.stats import binned_statistic, binned_statistic_2d
     seqlen = hidden_states.shape[0] * hidden_states.shape[1]
-    velocities = input.cpu().detach().numpy().reshape(seqlen, -1)[:, 0]
-    reshaped_output = output.cpu().detach().numpy().reshape(seqlen, -1)
+    velocities = inputs.reshape(seqlen, -1)[:, 0]
+    reshaped_output = outputs.reshape(seqlen, -1)
     headdirs = np.unwrap(np.arctan2(reshaped_output[:,0], reshaped_output[:,1])) % (2 * np.pi)
 
     print("Hidden states shape: ", hidden_states.shape)
@@ -96,13 +110,13 @@ def plotActivations(hidden_states, input, output):
 
         activations = torch.relu( torch.tanh( torch.from_numpy( hidden_states.reshape(seqlen, -1)[:, cell] ) ) )
         
-        print(f"Doing it for cell={cell}")
+        # print(f"Doing it for cell={cell}")
         bs = binned_statistic_2d(velocities, headdirs, activations, bins=[30, 30])
         curr_ax.pcolormesh(bs[1], bs[2], bs[0])
         curr_ax.set_yticks([])
         curr_ax.set_xticks([])
     
-    plt.savefig(f"activations_fakeAngs2.png")
+    plt.savefig(f"activations_{plot_caption}.png")
     plt.clf()
 
     _, ax = plt.subplots(10, 10, figsize=(20,15))
@@ -112,13 +126,13 @@ def plotActivations(hidden_states, input, output):
 
         activations = torch.relu( torch.tanh( torch.from_numpy( hidden_states.reshape(seqlen, -1)[:, cell] ) ) )
 
-        print(f"Doing it for cell={cell}, no bins")
+        # print(f"Doing it for cell={cell}, no bins")
         bs = binned_statistic(headdirs, activations)
         curr_ax.plot( (bs[1][1:] + bs[1][:-1]) / 2, bs[0])
         curr_ax.set_yticks([])
         curr_ax.set_xticks([])
     
-    plt.savefig(f"activations_fakeAngs_headdirs2.png")
+    plt.savefig(f"activations_{plot_caption}_headdirs.png")
     plt.clf()
 
     _, ax = plt.subplots(10, 10, figsize=(20,15))
@@ -128,13 +142,13 @@ def plotActivations(hidden_states, input, output):
 
         activations = torch.relu( torch.tanh( torch.from_numpy( hidden_states.reshape(seqlen, -1)[:, cell] ) ) )
 
-        print(f"Doing it for cell={cell}")
+        # print(f"Doing it for cell={cell}")
         bs = binned_statistic(velocities, activations)
         curr_ax.plot( (bs[1][1:] + bs[1][:-1]) / 2, bs[0])
         curr_ax.set_yticks([])
         curr_ax.set_xticks([])
     
-    plt.savefig(f"activations_fakeAngs_vels2.png")
+    plt.savefig(f"activations_{plot_caption}_vels.png")
     plt.clf()
 
 if __name__ == '__main__':
