@@ -9,74 +9,60 @@ from ContinuousTimeRNN import ContinuousTimeRNN
 from SingleLayerCTRNN import SingleLayerCTRNN
 from simple_data_gen import *
 
-NUM_EPOCHS = 200
-
 def main():
-    print("fakeAngs2 v6")
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    # Get the data 
-    train_data_size = 66
-    train_data_len = 700
-    initdir, input, output = gen_batch(train_data_size,train_data_len,.025,25,[],7, [0.0])
-
-    # Define the model and optimizer
     model = SingleLayerCTRNN(store_h=True)
     optimizer = torch.optim.Adam(model.parameters(), lr=.005, weight_decay=1e-6)
     criterion = nn.MSELoss()
     if torch.cuda.is_available():
         model = model.cuda()
         criterion = criterion.cuda()
+    model.load_state_dict(torch.load('activations_fakedata.pt', map_location=torch.device(device)))
 
-    # Train
-    losses = []
-    for epoch in range(NUM_EPOCHS):
-        optimizer.zero_grad()
-
+    inputs = None 
+    outputs = None
+    hidden_states = None
+    for i in range(10):
+        train_data_size = 100
+        train_data_len = 700
+        dt = .025
+        initdir, input, output = gen_batch(train_data_size,train_data_len,dt,25,[],7, [0.0])
         pred, h = model(initdir, input)
         loss = criterion(pred, output)
+        print(f"Loss on test data: {loss.item():.4f}")
 
-        print (f'Epoch [{epoch+1}/{NUM_EPOCHS}], Loss: {loss.item():.4f}' )
-        losses.append(loss.item())
+        np_input = np.array(input.cpu().detach().numpy())
+        np_output = np.array(output.cpu().detach().numpy())
+        np_h = np.array(h.cpu().detach().numpy())
+        if inputs is None:
+            inputs = np_input 
+            outputs = np_output
+            hidden_states = np_h
+        else:
+            inputs = np.concatenate((inputs, np_input), axis=1)
+            outputs = np.concatenate((outputs, np_output), axis=1)
+            hidden_states = np.concatenate((hidden_states, np_h), axis=1)
 
-        loss.backward()
-        optimizer.step()
-    
-    # Save the model
-    torch.save(model.state_dict(), 'activations_fakedata.pt')
-    # model.load_state_dict(torch.load('activations_fakedata'))
-
-    # Graph the losses
-    print(f"Losses: {losses}")
-    plt.plot(losses)
-    plt.xlabel('Iteration')
-    plt.ylabel('Loss')
-    plt.title('Training loss history')
-    plt.savefig('loss_ctrnn.png')
-    plt.clf()
-
-    TestCTRNN(model, criterion)
-    
-    del initdir
-    del input
-    del output
-
-def TestCTRNN(model, criterion):
-    train_data_size = 1400
+    train_data_size = 100
     train_data_len = 700
-    initdir, input, output = gen_batch(train_data_size,train_data_len,.025,25,[],7, [0.0])
+    # dt = .025
+    dt = 0.0025
+    initdir, input, output = gen_batch(train_data_size,train_data_len,dt,25,[],7, [0.0])
 
     pred, h = model(initdir, input)
     loss = criterion(pred, output)
     print(f"Loss on test data: {loss.item():.4f}")
     hidden_states = np.array(h.cpu().detach().numpy())
+    import pdb; pdb.set_trace()
 
     pred = np.transpose(pred.detach().cpu().numpy(), (2, 1, 0))
     pred = np.reshape(pred, (pred.shape[0], -1))
     radsOut = np.unwrap(np.arctan2(pred[0], pred[1]))
 
-    np_output = output.detach().cpu().numpy()
-    radsActual = np.unwrap(np.arctan2(np_output[:,:,0].flatten(), np_output[:,:,1].flatten()))
+    np_output = np.transpose(output.detach().cpu().numpy(), (2, 1, 0))
+    np_output = np.reshape(np_output, (pred.shape[0], -1))
+    radsActual = np.unwrap(np.arctan2(np_output[0], np_output[1]))
 
     plt.plot(radsActual, label='ground truth')
     plt.plot(radsOut, label='predicted')
