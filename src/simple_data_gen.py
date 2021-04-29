@@ -59,8 +59,8 @@ def gen_batch(n, tsteps, dt, win_size, landmark_list, landmark_wid, landmark_v=0
     rw = random_walk_on_s1(tsteps, dt, win_size)
     _, fin_h0_dat2, fin_input2, fin_output2 = tensor_gen(rw, landmark_list, landmark_wid, landmark_v)
 
-    fin_h0_dat = torch.cat((fin_h0_dat, fin_h0_dat2), axis=1).float().to(device)
-    fin_input = torch.cat((fin_input, fin_input2), axis=1).float().to(device)
-    fin_output = torch.cat((fin_output, fin_output2), axis=1).float().to(device)
+    fin_h0_dat = torch.cat((fin_h0_dat.float(), fin_h0_dat2.float()), axis=1).float().to(device)
+    fin_input = torch.cat((fin_input.float(), fin_input2.float()), axis=1).float().to(device)
+    fin_output = torch.cat((fin_output.float(), fin_output2.float()), axis=1).float().to(device)
 
   return fin_h0_dat, fin_input, fin_output
