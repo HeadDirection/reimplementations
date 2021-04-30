@@ -9,11 +9,11 @@ from ContinuousTimeRNN import ContinuousTimeRNN
 from SingleLayerCTRNN import SingleLayerCTRNN
 from simple_data_gen import *
 
-plot_caption = 'fakeAngs0025'
-model_weights = 'activations_fakedata_0025.pt'
-inputs_npy = 'inputs0025.npy'
-outputs_npy = 'outputs0025.npy'
-hidden_states_npy = 'hidden_states0025.npy'
+plot_caption = 'fakeAngs25'
+model_weights = 'activations_fakedata_25.pt'
+inputs_npy = 'inputs25.npy'
+outputs_npy = 'outputs25.npy'
+hidden_states_npy = 'hidden_states25.npy'
 
 def main():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
