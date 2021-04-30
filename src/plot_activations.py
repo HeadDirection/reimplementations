@@ -9,6 +9,12 @@ from ContinuousTimeRNN import ContinuousTimeRNN
 from SingleLayerCTRNN import SingleLayerCTRNN
 from simple_data_gen import *
 
+plot_caption = 'fakeAngs0025'
+model_weights = 'activations_fakedata_0025.pt'
+inputs_npy = 'inputs0025.npy'
+outputs_npy = 'outputs0025.npy'
+hidden_states_npy = 'hidden_states0025.npy'
+
 def main():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -18,13 +24,12 @@ def main():
     if torch.cuda.is_available():
         model = model.cuda()
         criterion = criterion.cuda()
-    model.load_state_dict(torch.load('activations_fakedata_0025.pt', map_location=torch.device(device)))
+    model.load_state_dict(torch.load(model_weights, map_location=torch.device(device)))
 
-    plot_caption = 'fakeAngs0025'
     try:
-        inputs = np.load("inputs.npy")
-        outputs = np.load("outputs.npy")
-        hidden_states = np.load("hidden_states.npy")
+        inputs = np.load(inputs_npy)
+        outputs = np.load(outputs_npy)
+        hidden_states = np.load(hidden_states_npy)
     except:
         inputs = None 
         outputs = None
@@ -83,9 +88,9 @@ def main():
     plt.savefig(f'performance_{plot_caption}.png')
 
     print("Saving hidden_states, inputs, outputs to disk")
-    np.save("hidden_states.npy", hidden_states)
-    np.save("inputs.npy", inputs)
-    np.save("outputs.npy", outputs)
+    np.save(hidden_states_npy, hidden_states)
+    np.save(inputs_npy, inputs)
+    np.save(outputs_npy, outputs)
     plotActivations(hidden_states, inputs, outputs, plot_caption)
 
     del initdir 
