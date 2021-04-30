@@ -9,11 +9,11 @@ from ContinuousTimeRNN import ContinuousTimeRNN
 from SingleLayerCTRNN import SingleLayerCTRNN
 from simple_data_gen import *
 
-plot_caption = 'fakeAngs25'
-model_weights = 'activations_fakedata_25.pt'
-inputs_npy = 'inputs25.npy'
-outputs_npy = 'outputs25.npy'
-hidden_states_npy = 'hidden_states25.npy'
+plot_caption = 'fakeAngs00025'
+model_weights = 'activations_fakedata_00025.pt'
+inputs_npy = 'inputs00025.npy'
+outputs_npy = 'outputs00025.npy'
+hidden_states_npy = 'hidden_states00025.npy'
 
 def main():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -38,7 +38,7 @@ def main():
     for i in range(3):
         train_data_size = 70
         train_data_len = 700
-        dt = .25
+        dt = .00025
         initdir, input, output = gen_batch(train_data_size,train_data_len,dt,25,[],7, [0.0])
         pred, h = model(initdir, input)
         loss = criterion(pred, output)
@@ -63,7 +63,7 @@ def main():
     train_data_size = 100
     train_data_len = 700
     # dt = .025
-    dt = 0.25
+    dt = 0.00025
     initdir, input, output = gen_batch(train_data_size,train_data_len,dt,25,[],7, [0.0])
 
     pred, h = model(initdir, input)
