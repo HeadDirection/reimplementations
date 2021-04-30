@@ -9,16 +9,17 @@ from ContinuousTimeRNN import ContinuousTimeRNN
 from SingleLayerCTRNN import SingleLayerCTRNN
 from simple_data_gen import *
 
-NUM_EPOCHS = 200
+NUM_EPOCHS = 300
 
 def main():
-    print("fakeAngs2 v6")
+    print("fakeAngs2 v7")
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     # Get the data 
     train_data_size = 66
     train_data_len = 700
-    initdir, input, output = gen_batch(train_data_size,train_data_len,.025,25,[],7, [0.0])
+    dt = 0.0025
+    initdir, input, output = gen_batch(train_data_size,train_data_len,dt,25,[],7, [0.0])
 
     # Define the model and optimizer
     model = SingleLayerCTRNN(store_h=True)
@@ -43,7 +44,7 @@ def main():
         optimizer.step()
     
     # Save the model
-    torch.save(model.state_dict(), 'activations_fakedata.pt')
+    torch.save(model.state_dict(), 'activations_fakedata_0025.pt')
     # model.load_state_dict(torch.load('activations_fakedata'))
 
     # Graph the losses
@@ -52,10 +53,10 @@ def main():
     plt.xlabel('Iteration')
     plt.ylabel('Loss')
     plt.title('Training loss history')
-    plt.savefig('loss_ctrnn.png')
+    plt.savefig('loss_ctrnn_0025.png')
     plt.clf()
 
-    TestCTRNN(model, criterion)
+    # TestCTRNN(model, criterion)
     
     del initdir
     del input
@@ -64,7 +65,8 @@ def main():
 def TestCTRNN(model, criterion):
     train_data_size = 1400
     train_data_len = 700
-    initdir, input, output = gen_batch(train_data_size,train_data_len,.025,25,[],7, [0.0])
+    dt = 0.0025
+    initdir, input, output = gen_batch(train_data_size,train_data_len,dt,25,[],7, [0.0])
 
     pred, h = model(initdir, input)
     loss = criterion(pred, output)
