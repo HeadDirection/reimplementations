@@ -18,9 +18,9 @@ def main():
     if torch.cuda.is_available():
         model = model.cuda()
         criterion = criterion.cuda()
-    model.load_state_dict(torch.load('activations_fakedata.pt', map_location=torch.device(device)))
+    model.load_state_dict(torch.load('activations_fakedata_0025.pt', map_location=torch.device(device)))
 
-    plot_caption = 'fakeAngs2'
+    plot_caption = 'fakeAngs0025'
     try:
         inputs = np.load("inputs.npy")
         outputs = np.load("outputs.npy")
