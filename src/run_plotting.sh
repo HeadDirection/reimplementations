@@ -7,7 +7,7 @@ fi
 
 for i in $(seq 1 $1); do
     echo "Running plot iteration $i"
-    du -sh hidden_states25.npy
+    du -sh hidden_states00025.npy
     python3 plot_activations.py
 done 
 
