@@ -2,6 +2,7 @@
 
 if [ $# -ne 1 ]; then 
     echo "Usage: ./run_plotting.sh <number of iterations>"
+    exit 1
 fi
 
 for i in $(seq 1 $1); do
