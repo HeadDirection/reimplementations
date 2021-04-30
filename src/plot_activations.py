@@ -38,7 +38,7 @@ def main():
     for i in range(3):
         train_data_size = 70
         train_data_len = 700
-        dt = .0025
+        dt = .25
         initdir, input, output = gen_batch(train_data_size,train_data_len,dt,25,[],7, [0.0])
         pred, h = model(initdir, input)
         loss = criterion(pred, output)
@@ -63,7 +63,7 @@ def main():
     train_data_size = 100
     train_data_len = 700
     # dt = .025
-    dt = 0.0025
+    dt = 0.25
     initdir, input, output = gen_batch(train_data_size,train_data_len,dt,25,[],7, [0.0])
 
     pred, h = model(initdir, input)
